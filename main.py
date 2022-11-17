@@ -17,7 +17,7 @@ readCSV("UAM Test Data.csv")
 @dataclass
 class Level0HardwareGivens:
     range: float
-    v_max: float
+    max_speed: float
     energy_cap: float
     energy_consumption_dist: float
     num_passengers: float
@@ -89,19 +89,23 @@ class Level1:
                 level0.hardware.energy_consumption_dist * level0.geography.trip_dist))) / \
                                  level0.geography.max_charging_refuel_rate
 
-        self.desirable_time = level0.hardware.v_max >= level0.geography.trip_dist / level0.user.total_trip_time
+        self.desirable_time = level0.hardware.max_speed >= level0.geography.trip_dist / level0.user.total_trip_time
         luggage_per_person = (level0.hardware.max_luggage_weight / level0.hardware.num_passengers)
         self.desirable_luggage = luggage_per_person >= level0.user.max_possible_luggage_per_passenger_weight
 
 
 class Level2:
+    level0: Level0
+    level1: Level1
     energy_cost_by_weight_at_max_weight: float
     desirable_ingress_egress_time: bool
 
     def __init__(self, level1: Level1):
-        total_weight = level1.level0.hardware.vehicle_base_weight + level1.level0.hardware.max_total_passenger_weight
-        total_weight += level1.level0.hardware.max_luggage_weight
+        self.level1 = level1
+        self.level0 = level1.level0
+        total_weight = self.level0.hardware.vehicle_base_weight + self.level0.hardware.max_total_passenger_weight
+        total_weight += self.level0.hardware.max_luggage_weight
         self.energy_cost_by_weight_at_max_weight = level1.total_energy_cost_per_trip / total_weight
 
-        egress_ratio = level1.level0.user.max_tolerable_ingress_egress_time / level1.level0.hardware.ingress_egress_time
+        egress_ratio = self.level0.user.max_tolerable_ingress_egress_time / self.level0.hardware.ingress_egress_time
         self.desirable_ingress_egress_time = level1.total_charge_time <= egress_ratio
